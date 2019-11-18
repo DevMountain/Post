@@ -22,25 +22,9 @@ class PostController {
         -reset- This allows us to decide whether we are loading our first set of posts to display or we are paging for another set to add to our current posts. The parameter is changed to false in the willDisplayCell function on the PostListTableViewController.
      -Completion- Network calls need a completion so we know when our call is complete and we can update the UI accordingly.
      */
-    func fetchPosts(reset: Bool = true, completion: @escaping() -> Void) {
+    func fetchPosts(completion: @escaping() -> Void) {
         guard let baseURL = PostController.baseURL else { return }
-        //Ternary Operator deciding whether or not we are loading our first set of posts or not. We will create our query based on the Date that is returned from this boolean. By default we are loading from the current Date.
-        let queryEndInterval = reset ? Date().timeIntervalSince1970 : posts.last?.queryTimestamp ?? Date().timeIntervalSince1970
-        
-        //Create a dictionary that we can use to make our three URLQueryItems
-        let urlParameters = [
-            "orderBy": "\"timestamp\"",
-            "endAt": "\(queryEndInterval)",
-            "limitToLast": "15",
-        ]
-        //Create our 3 Query Items based on the above dictionary.
-        let queryItems = urlParameters.compactMap({ URLQueryItem(name: $0.key, value: $0.value) })
-        //Add our query items to our URL
-        var urlComponents = URLComponents(url: baseURL, resolvingAgainstBaseURL: true)
-        urlComponents?.queryItems = queryItems
-        
-        guard let url = urlComponents?.url else { completion(); return }
-        let getterEndpoint = url.appendingPathExtension("json")
+        let getterEndpoint = baseURL.appendingPathExtension("json")
         
         //In our fetchPosts function we are "GETTING" posts. httpMethod by default is set to "GET"
         var request = URLRequest(url: getterEndpoint)
@@ -69,64 +53,13 @@ class PostController {
                 let sortedPosts = posts.sorted(by: { $0.timestamp > $1.timestamp })
                 //By default(reset = true) we are going to set our source of truth to be the returned posts.
                 //If the reset is set to false, we are going to append our new posts onto our array of posts
-                if reset {
-                    self.posts = sortedPosts
-                } else {
-                    self.posts.append(contentsOf: sortedPosts)
-                }
+                self.posts = sortedPosts
                 completion()
             } catch {
                 print("Error Decoding: \(error.localizedDescription)")
                 completion()
             }
         })
-        dataTask.resume()
-    }
-    
-    /*
-    addPost Function
-    -Parameters
-        -username- String made from the text of our usernameTextField on the alertController.
-        -text- String made from the text of our messageTextField on the alertController.
-    -Completion- Network calls need a completion so we know when our call is complete and we can update the UI accordingly.
-    */
-    func addPost(username: String, text: String, completion: @escaping() -> Void) {
-        guard let baseURL = PostController.baseURL else { return }
-        let post = Post(username: username, text: text)
-        //Create a variable that our data will be written to.
-        var postData: Data
-        
-        do {
-            let encoder = JSONEncoder()
-            postData = try encoder.encode(post)
-        } catch {
-            print("Error decoding post to be saved: \(error.localizedDescription)")
-            completion()
-            return
-        }
-        
-        let postEndoint = baseURL.appendingPathExtension("json")
-        
-        //Change the httpMethod to "POST" because we are POSTING to the URL rather than GETTING from the URL.
-        var request = URLRequest(url: postEndoint)
-        request.httpMethod = "POST"
-        request.httpBody = postData
-        
-        let dataTask = URLSession.shared.dataTask(with: request) { (data, _, error) in
-            if let error = error {
-                print("Error: \(error.localizedDescription)")
-                completion()
-                return
-            }
-            guard data != nil else {
-                print("Data is nil, Unable to verify if data was able to be plut to endpoint.")
-                completion()
-                return
-            }
-            self.fetchPosts {
-                completion()
-            }
-        }
         dataTask.resume()
     }
 }

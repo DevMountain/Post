@@ -13,11 +13,6 @@ struct Post: Codable {
     let username: String
     let text: String
     let timestamp: TimeInterval
-    
-    //This is the timestamp used for the feature of pagination. This allows us to ask firebase for the next set of posts from the timestamp of the last received post minus a sliver of a second to make sure that it isn't the exact timestamp.
-    var queryTimestamp: TimeInterval {
-        return timestamp - 0.00001
-    }
     /*
      Initializer for a new Post object
      
